@@ -92,16 +92,7 @@ server <- function(input, output) {
   output$value <- renderPrint({ input$pianeti })
   output$planetPlot <- renderPlot({
     
-#    dataset = (ifelse((input$pianeti == "Terra"), filter(appSet, (rapporto>0.75) & (rapporto<1.25)),
- #              (ifelse((input$pianeti == "Mercurio"), filter(appSet, ( (((appSet$massMerc * (3.285 *(10 ^ 23) / 2440))/ appSet$radMerc) >0.75) & (((appSet$massMerc * (3.285 *(10 ^ 23) / 2440))  / appSet$radMerc) < 1.25) )),
-  #              (ifelse((input$oianeti == "Venere"), filter(appSet,  (((appSet$massVen * (4.867 *(10 ^ 24) / 6052))/ appSet$radVen) >0.75) & (((appSet$massVen * (4.867 *(10 ^ 24) / 6052)) / appSet$radVen) <1.25) ),
-   #              (ifelse((input$pianeti == "Marte"), filter(appSet,  (((appSet$massMar * (6.39 *(10 ^ 23) / 3389.5)) / appSet$radMar) >0.75) & (((appSet$massMar * (6.39 *(10 ^ 23) / 3389.5)) / appSet$radMar) <1.25) ),
-    #              (ifelse((input$pianeti == "Giove"), filter(appSet,  (((pl_bmassj / pl_radj) / (1.898 *(10 ^ 27) / 69911)) >0.75) & ((((pl_bmassj / 69911) / (1.898 *(10 ^ 27) / 69911)) / pl_radj) <1.25) ),
-     #              (ifelse((input$pianeti == "Saturno"), filter(appSet, (((appSet$massSat * (5.683 *(10 ^ 26) / 58232)) / appSet$radSat) >0.75) & (((appSet$massSat * (5.683 *(10 ^ 26) / 58232)) / appSet$radSat) <1.25) ),
-      #              (ifelse((input$pianeti == "Urano"), filter(appSet, (((appSet$massUr * (8.681 *(10 ^ 25) / 25362)) / appSet$radUr) >0.75) & (((appSet$massUr (8.681 *(10 ^ 25) / 25362)) / appSet$radUr) <1.25) ),
-       #              (ifelse((input$pianeti == "Nettuno"), filter(appSet, (((appSet$massNett * (1.024 *(10 ^ 26) / 24622)) / appSet$radNett) >0.75) & (((appSet$massNett * (1.024 *(10 ^ 26) / 24622)) / appSet$radNett) <1.25) )
-        #                     )) )) )) )) )) )) )) )) 
-    # generate dataset
+
     if (input$pianeti == 3) {
       dataset = filter(appSet, (rapporto>0.75) & (rapporto<1.25)) 
     } else if(input$pianeti == 1){
