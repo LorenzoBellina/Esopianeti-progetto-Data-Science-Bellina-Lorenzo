@@ -1,0 +1,252 @@
+---
+title: "esopianetiProsa"
+author: "Lorenzo Bellina"
+date: "6/20/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r library, include = FALSE}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(lubridate)
+library(modelr)
+library(gganimate)
+library(shiny)
+
+```
+## UNO STUDIO SUGLI ESOPIANETI
+
+Partendo dal dataset degli esopianeti fornitoci dalla NASA (https://exoplanetarchive.ipac.caltech.edu/cgi-bin/TblView/nph-tblView?app=ExoTbls&config=PS) è possibile svolgere una ricerca, seppur superficiale, di pianeti che potrebbero avere alcune condizioni necessarie per lo sviluppo di organismi viventi.
+
+```{r, include=FALSE}
+pl3310 <- read.csv("~/Downloads/planets_2020.06.10_11.33.06.csv", comment.char="#")
+pianeti <- read.csv("/Users/lorenzobellina/Desktop/fondamenti_dati/pianeti.csv", comment.char="#")
+```
+
+
+## 
+
+Per ogni pianeta riportato sono definite diverse caratteristiche quali la misura del raggio, il peso, il semiasse orbitale e molte altre per un totale maggiore di 200 specifiche. 
+Gli esopianeti scoperti fino ad oggi sono migliaia ma la maggior parte di questi non è accomunabile alla Terra. 
+L'obiettivo dell'analisi da me proposta è quello di cercare quali, tra i pianeti riportati nel database della NASA, possa  somigliare il più possibile al nostro e quindi, teoricamente ospitare forme di vita di ogni genere. 
+
+
+## STRUTTURA DELL'ANALISI
+
+L'analisi infatti si basa su:
+
+* una prima grossolana selezione di esopianeti
+* un successivo confronto tra questi
+* una conseguente selezione degli elementi migliori
+
+## PRIMA SELEZIONE
+
+Gli esopianeti scoperti sino ad oggi sono migliaia ma non tutti sembrano adatti ad ospitare organismi viventi. Sono infatti necessarie alcune restrizioni volte ad escludere i pianeti troppo diversi dalla Terra:
+
+* $raggio < 5 * radT , raggio > 0.25 * radT$
+* $massa < 5 * massT , massa > 0.25 * massT$
+
+```{r, include=FALSE}
+
+
+#FILTRAGGIO DEL DATASET E COLORAZIONE
+exoplanetsTotInit = pl3310 %>% 
+  filter(!is.na(pl_bmassj)) %>%
+  mutate(massT = ((pl_bmassj *  (1.898 * (10 ^ 27))) / (5.972 * (10 ^ 24))) ) %>%
+    filter(!is.na(pl_radj)) %>%
+  mutate(radT = ((pl_radj * 69911) / 6371)) %>%
+  
+  mutate(rapporto = (massT / radT) ) %>%
+  
+    mutate(colore= (ifelse((((rapporto<0.75) & (rapporto>0.5)) | ((rapporto>1.25) & (rapporto<1.5))), 'yellow', (ifelse( ((rapporto>0.75) & (rapporto<1.25)), 'green', 'red' )) ) )) %>%
+    #mutate(rad_err = ((pl3310$pl_radjerr1)*RTG)) %>%
+  #mutate(mass_err = ((pl3310$pl_bmassjerr1)*MTG)) %>%
+  
+  filter(massT < 5, massT > 0.25) %>% 
+  
+  filter(radT < 5, radT > 0.25) 
+
+
+#RIMOZIONE DAL DATASET DI ALCUNE RIGHE RIPETUTE
+exoplanetsTot <- exoplanetsTotInit[-c(50, 51, 52, 86, 119),]
+
+```
+
+##
+I risultati di questa prima selezione vengono rappresentati nel seguente animation plot all'interno del quale compaiono a seconda dell'anno di scoperta, collocandosi più o meno vicini alla bisettrice del quadrante, ovvero in base alla somiglianza con la Terra, elemento per cui vengono classificati.
+
+```{r, include=FALSE}
+#PLOT CON ANIMAZIONE DEL DATASET
+
+prova2= ggplot(data=exoplanetsTot, aes(massT, radT), size= pop) + 
+  geom_point(alpha = 0.5, show.legend = TRUE)+
+  geom_abline(intercept = 0, slope = 1, colour = "#cb3234") +
+  geom_point(colour = exoplanetsTot$colore) +
+  scale_size(range = c(2, 100))+
+
+  labs(title = 'Year: {frame_time}', x = 'Raggio', y = 'Massa') +  
+  transition_time(pl_disc) +
+  shadow_mark() +
+  enter_grow() + 
+  ease_aes('linear') 
+
+#animate(prova2, duration =25, fps =20, width= 500, height=500, end_pause = 25)
+
+#anim_save("exoAnimation.gif")
+
+
+```
+<center>
+![](/Users/lorenzobellina/primoEs/exoAnimation.gif){width=50%}
+</center>
+
+## I CASI MIGLIORI
+
+Vengono dunque presi in considerazione solamente i casi migliori rappresentati in un grafico che li posiziona in base all'anno di scoperta e al rapporto tra massa e raggio in relazione al campione terrestre. Ad ognuno dei punti risultanti è affiliata una label indicante il nome del pianeta che esso rappresenta. 
+
+
+```{r, include = FALSE}
+#VISUALIZZAZIONE SOLO DEI PIANETI MIGLIORI (VERDI)
+
+planetsDetail = exoplanetsTot %>%
+  filter(exoplanetsTot$colore == 'green') %>%
+  mutate(ratio = (massT/radT)) 
+
+  
+liveable = ggplot(data = planetsDetail, aes(pl_disc, ratio)) +
+  geom_point(alpha = 0.5, show.legend = FALSE, colour = 'blue') + 
+  expand_limits(x = 2009, y = 0.75) +
+  expand_limits(x=2017, y = 1.15) +
+  geom_text(aes(label= planetsDetail$pl_name), hjust=1.2, alpha = 0.5) 
+
+liveable
+
+```
+<center>
+![](/Users/lorenzobellina/primoEs/liveable.png){width=70%}
+</center>
+
+##
+
+Entrando più nel dettaglio di questi punti vengono analizzati alcuni tra gli aspetti più importanti a loro relazionati evidenziandone i valori. Grazie a questi si può notare come i pianeti riportati appartengono a diversi sistemi più o meno distanti dal nostro, decidendo così di rappresentarli in un plot che prende in esame proprio la distanza tra i due sistemi e la data di scoperta.
+
+```{r, include=FALSE}
+planetInfo = planetsDetail %>%
+  mutate(massErr = (planetsDetail$pl_bmassjerr1 * (1898/5.972)),
+         radErr = (planetsDetail$pl_radjerr1 * (69911 / 6371))) %>%
+  rename(
+    planet_name = pl_name,
+    discovery_year =  pl_disc,#disc_year,
+    discovery_facility = pl_facility,#disc_facility
+  )%>%
+  select(planet_name, pl_hostname, discovery_year, discovery_facility, st_dist, massT, massErr, radT, radErr)
+
+planetInfo
+```
+
+##
+
+Notiamo così che due tra questi pianeti sono estremamente più vicini a noi. Questi appartengono allo stesso sistema: **TRAPPIST-1**.
+
+```{r, include= FALSE}
+distance <- ggplot(data = planetsDetail, aes(pl_disc, st_dist)) +
+  geom_point(alpha = 0.5, show.legend = FALSE, colour = 'blue') + 
+  expand_limits(x = 2009, y = 0.75) +
+  expand_limits(x=2017, y = 1.15) +
+  geom_text(aes(label= planetsDetail$pl_name), hjust=1.2, alpha = 0.5) 
+
+distance
+  
+```
+<center>
+![](/Users/lorenzobellina/primoEs/distance.png){width=70%}
+</center>
+
+## TRAPPIST-1
+
+Recuperiamo dunque i dati relativi all'intero sistema presente nel database iniziale per osservarne alcune caratteristiche.
+Purtroppo questo ci forniscce solo alcuni dettagli specifici tra cui però non ne compare uno essenziale: il tipo di rotazione, che, soprattutto in questo caso, diventa un dettaglio di assoluta rilevanza.
+
+Entrambi infatti sono caratterizzati da una rotazione sincrona e quindi mostrano sempre la stessa faccia alla stella dividendosi in tre zone ben precise: una parte sempre a contatto con la luce della stella e di conseguenza molto calda, la parte ad essa opposta dominata dal ghiaccio e la zona intermedia tra esse nella quale grazie ai possibili oceani potrebbero abitare diverse forme di vita. Le temperature delle facce, sebbene in maniera opposta, sono estreme e rendono impossibile la vita nelle regioni più esposte (e allo stesso modo meno esposte) all'illuminazione della stella. 
+Questo fenomeno fa sì che le uniche zone possibili in cui potrebbero essersi originate delle forme di vita siano i territori intermedi alle due facce.
+
+
+```{r, include = FALSE}
+trappist <- exoplanetsTot[exoplanetsTot$hostname == "TRAPPIST-1",] %>%
+  mutate(coloreMatch = 'purple')
+```
+
+## PARAGONE TRA I DUE SISTEMI
+
+Confrontando questo al sistema solare si può notare come alcuni pianeti appartenenti a TRAPPIST-1 abbiano dimensioni simili ai nostri vicini, ad esclusione di Giove e Saturno in quanto troppo grandi. Come nel grafico relativo agli esopianeti è presente una retta sulla quale vediamo posizionarsi la Terra, come nel precedente caso infatti questa rappresenta il valore del rapporto terrestre tra le due dimensioni, ovvero la massa e il raggio. Da questo confronto salta all'occhio come alcuni pianeti del sistema TRAPPIST-1 siano più vicini alla bisettrice di altri come Marte, sul quale si ritiene che in passato fossero presenti microorganismi viventi e che forse continuino ad abitare questo.
+
+
+
+```{r, include=FALSE}
+
+pianeti
+
+solarPlanets = pianeti %>%
+  mutate(semiaxis_mj = ( (((aphelion * (10 ^ 6)) + (perihelion * (10 ^ 6))) / 2) / (1.496 * (10 ^ 8)) ) ) %>%
+  mutate(massT = (mass  / pianeti$mass[3]) ) %>%
+  mutate(radT = (diameter / pianeti$diameter[3])) %>%
+  select(planet, semiaxis_mj, massT, radT) %>% 
+  mutate(coloreMatch = 'gold') %>%
+  mutate(pl_name = pianeti$planet)
+
+
+solarLimit <- solarPlanets[-c(5, 6, 7, 8),] 
+
+matching = full_join(solarLimit, trappist)
+
+
+
+system_matching = ggplot(matching, aes(massT, radT), size = pop) +
+          geom_point(alpha = 0.5, show.legend = FALSE)+
+          geom_abline(intercept = 0, slope = 1, colour = "#cb3234") +
+          geom_point(colour = matching$coloreMatch) +
+          scale_size(range = c(2, 100))+
+          geom_text(aes(label= pl_name), hjust= 1.1) +
+          expand_limits(x = -0.05, y = 1.5) 
+
+
+#system_matching
+```
+
+<center>
+![](/Users/lorenzobellina/primoEs/syM.png){width=70%}
+</center>
+
+
+## CONCLUSIONE
+
+Quest'ultima assunzione rafforza una delle tesi, ovvero quella relativa alla correlazione tra dimensioni del pianeta ed abitabilità.
+Va però specificato come i fattori influenti nelle ipotesi di abitabilità non si fermano alle dimensioni del pianeta, bensì sono numerosi e tra questi entrano in gioco alcuni non presenti nel dataset come l'atmosfera, la gravità presente su questi e altri ancora. 
+Negli ultimi anni sono state svolte diverse ricerche a riguardo i cui risultati sembrano lentamente affievolire l'entusiasmo iniziale manifestato da parte della comunità scientifica e della NASA stessa. Alcuni studiosi ritengono infatti che anche i pianeti più miti del sistema possano essere soggetti a un effetto serra fuori controllo e che la nana rossa attorno alla quale orbitano possa essere troppo variabile. Questo tipo di stella infatti è spesso soggetta a brillamenti molto violenti, in grado anche di spazzar via l'atmosfera di pianeti posti a così breve distanza.
+
+L'entusiasmo della comunità scientifica seppur frenato non si è spento ancora. Al momento, nonostante i vari studi, non si hanno certezze riguardo all'inabitabilità dell'intero sistema di TRAPPIST-1. Inoltre la scoperta di nuovi esopianeti avanza a un ritmo talmente elevato, circa 4000 nell'ultimo decennio, da nutrire la speranza di prossime scoperte di pianeti da ritenere in grado di ospitare forme di vita. 
+
+
+
+## POSSIBILI VISITE
+Supponendo in qualche maniera di riuscire a raggiungere il sistema in questione e in particolare il pianeta TRAPPIST-1 c, allora una volta colonizzato qualora questo fosse simile alla Terra ci si potrebbe stanziare. Successivamente organizzare una spedizione verso il pianeta più vicino quindi il pianeta b del sistema distante $4.1*10^{-3}$.
+Questa distanza è ritenuta percorribile poiché è inferiore al doppio della distanza tra il nostro pianeta e la Luna, e quindi in virtù dell'allunaggio è considerabile copribile come viaggio nello spazio.
+
+
+
+
+
+
+## APP
+
+```{r,echo=FALSE}
+shinyAppFile("/Users/lorenzobellina/primoEs/appExo/planetapp.R", options = list())
+```
