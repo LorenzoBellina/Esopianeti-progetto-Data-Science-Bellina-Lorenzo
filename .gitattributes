@@ -1,3 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 planets_2020.06.10_11.33.06.csv filter=lfs diff=lfs merge=lfs -text
+esopianetiProsa.html filter=lfs diff=lfs merge=lfs -text
